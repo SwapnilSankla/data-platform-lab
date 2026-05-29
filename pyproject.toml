@@ -1,0 +1,21 @@
+[project]
+name = "data-platform-lab"
+version = "0.1.0"
+description = "data-platform-lab"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "boto3>=1.43.13",
+    "ipykernel>=7.2.0",
+    "pandas>=3.0.3",
+    "pyarrow>=24.0.0",
+    "pyspark==3.5.1",
+    "python-dotenv>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "pytest>=9.0.3",
+    "ruff>=0.15.14",
+]

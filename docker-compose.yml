@@ -1,0 +1,84 @@
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"    # API port
+      - "9001:9001"    # Web Console port
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  
+  
+  spark-master:
+    build: 
+      context: ./infrastructure/spark
+    container_name: spark-master
+    ports:
+      - "8080:8080"   # Spark Master web UI
+      - "7077:7077"   # Spark Master port
+      - "4040:4040"   # Spark application UI
+    environment:
+      - SPARK_MODE: master
+      - MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    volumes:
+      - spark-data:/opt/spark/work-dir
+      - ./spark:/opt/spark-apps 
+      - spark-events:/tmp/spark-events
+
+  spark-worker:
+    build: 
+      context: ./infrastructure/spark
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE: worker
+      - SPARK_MASTER_URL: spark://spark-master:7077
+      - SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY}
+      - SPARK_WORKER_CORES: ${SPARK_WORKER_CORES}
+      - MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    volumes:
+      - spark-data:/opt/spark/work-dir
+      - spark-events:/tmp/spark-events
+
+  spark-history-server:
+    build:
+      context: ./infrastructure/spark
+    container_name: spark-history-server
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.history.HistoryServer
+    environment:
+      - SPARK_HISTORY_OPTS: -Dspark.history.fs.logDirectory=file:///tmp/spark-events
+    ports:
+      - "18080:18080"
+    volumes:
+      - spark-events:/tmp/spark-events
+
+volumes:
+  minio_data:
+  postgres_data:
+  spark-data: 
+  spark-events:
