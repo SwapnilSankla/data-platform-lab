@@ -3,6 +3,7 @@ site_description: Building a production-grade Data Platform from first principle
 site_url: https://swapnilsankla.github.io/data-platform-lab/
 repo_url: https://github.com/SwapnilSankla/data-platform-lab
 repo_name: SwapnilSankla/data-platform-lab
+use_directory_urls: true
 
 theme:
   name: material
