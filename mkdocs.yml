@@ -1,0 +1,45 @@
+site_name: Data Platform Lab
+site_description: Building a production-grade Data Platform from first principles
+site_url: https://swapnilsankla.github.io/data-platform-lab/
+repo_url: https://github.com/SwapnilSankla/data-platform-lab
+repo_name: SwapnilSankla/data-platform-lab
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Spark:
+      - Execution Model:
+          - Internal Execution Model: spark/internal-execution-model.md
+          - Lazy Evaluation: spark/lazy-evaluation.md
+          - Transformations vs Actions: spark/transformations-vs-actions.md
+
+      - Physical Execution:
+          - Execution Partitions: spark/execution-partitions.md
+          - Physical Plan: spark/how-to-interpret-spark-physical-plan.md
+
+      - Data Movement:
+          - Narrow vs Wide Transformations: spark/narrow-vs-wide-transformations.md
+          - Shuffle: spark/shuffle.md
+          - Repartition vs Coalesce: spark/repartition-vs-coalesce.md
+
+      - Query Patterns:
+          - Sort Merge Join: spark/joins/sort-merge-join.md
+
+      - Performance:
+          - Caching and Persistence: spark/caching-and-persistence.md
+
+  - Lakehouse:
+      - Evolution: lakehouse/01-evolution-of-modern-data-storage.md
+      - Storage Model: lakehouse/02-row-vs-column-storage.md
+      - Parquet Anatomy: lakehouse/03-anatomy-of-a-parquet-file.md
+      - Row Groups: lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file.md
+      - Concepts:
+          - Object Storage vs Lake vs Lakehouse: lakehouse/object-storage-vs-lake-vs-lakehouse.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
