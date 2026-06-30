@@ -1,44 +1,24 @@
 # Data Platform Lab
 
-> Building a production-grade data platform from first principles.
+A hands-on engineering lab for understanding how modern data platforms actually work — from Spark execution to Iceberg internals.
 
 ---
 
-## Why this exists
+## Core Areas
 
-This is a structured learning system for understanding how modern data platforms actually work under the hood — not just using tools, but understanding their internal design.
+- ⚙️ **[Spark Internals](spark/internal-execution-model.md)**  
+  Execution model, shuffles, joins, physical plans
 
----
+- 🧱 **[Lakehouse Storage](lakehouse/01-evolution-of-modern-data-storage.md)**  
+  Parquet, row groups, encodings, columnar design
 
-## What you’ll learn
-
-### ⚙️ Compute Engine (Spark)
-How distributed execution actually works:
-- Lazy evaluation
-- Physical plans
-- Partitioning & shuffles
-- Joins & execution strategies
-
-### 🧱 Storage Layer (Lakehouse)
-How data is physically stored and optimized:
-- Parquet internals
-- Row groups & column chunks
-- Compression & encodings
-- Query pruning
-
-### ❄️ Table Format (Iceberg – coming next)
-How modern tables solve evolution problems:
-- Schema evolution
-- Time travel
-- Metadata layering
+- ❄️ **Iceberg (Coming Next)**  
+  Table formats, metadata layers, time travel
 
 ---
 
-## Suggested learning path
+## 🎯 Start Here
 
-1. Spark Execution Model
-2. Shuffle & Data Movement
-3. Joins (Sort Merge Join)
-4. Parquet Internals
-5. Row Groups
-6. Iceberg (next phase)
+Follow this path:
+
+**Spark → Shuffle → Joins → Parquet → Iceberg**
