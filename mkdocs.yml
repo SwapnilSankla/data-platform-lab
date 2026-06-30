@@ -6,6 +6,24 @@ repo_name: SwapnilSankla/data-platform-lab
 
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
 
 nav:
   - Home: index.md
@@ -43,3 +61,9 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+
+extra:
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css      
