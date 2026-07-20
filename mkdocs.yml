@@ -77,11 +77,11 @@ nav:
       - Why Small Parts Destroy Systems: clickhouse/03-why-small-parts-destroy-systems.md
       - Merge Amplification (The Invisible Multiplier): clickhouse/04-merge-amplification.md
       - Merge Selection & Starvation: clickhouse/05-merge-selection-and-starvation.md
-      - Order By - A Physical Design Tool: clickhouse/06-order-by-a-physical-design-tool
+      - Order By - A Physical Design Tool: clickhouse/06-order-by-a-physical-design-tool.md
       - Granules, Primary Index, and the Illusion of Skipping: clickhouse/07-granules-primay-index-illusion-of-skipping.md
       - IO Vs CPU - Finding The Real Bottleneck: clickhouse/08-io-vs-cpu-finding-the-real-bottleneck.md
-      - When Optimization Stopes Working: 09-when-optimization-stops-working.md
-      - Pre-aggregation, Multi-tenancy and System Boundaries: 10-pre-aggregation-multi-tenancy-and-system-boundaries.md
+      - When Optimization Stopes Working: clickhouse/09-when-optimization-stops-working.md
+      - Pre-aggregation, Multi-tenancy and System Boundaries: clickhouse/10-pre-aggregation-multi-tenancy-and-system-boundaries.md
 
 markdown_extensions:
   - admonition
