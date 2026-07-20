@@ -22,6 +22,7 @@ theme:
     - content.tabs.link
     - search.suggest
     - search.highlight
+    - toc.follow
     - content.action.edit
     - content.action.view
 
@@ -34,11 +35,11 @@ theme:
         name: Dark mode
 
     - scheme: slate
-      primary: indigo
+      primary: black
       accent: blue
       toggle:
         icon: material/brightness-4
-        name: Light mode
+        name: Light mode    
 
 nav:
   - Home: index.md
@@ -70,6 +71,17 @@ nav:
       - Row Groups: lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file.md
       - Concepts:
           - Object Storage vs Lake vs Lakehouse: lakehouse/object-storage-vs-lake-vs-lakehouse.md
+  - ClickHouse:
+      - Why ClickHouse Rewrites Data: clickhouse/01-why-clickhouse-rewrites-data.md
+      - The Hidden Cost Of The Inserts: clickhouse/02-the-hidden-cost-of-the-inserts.md
+      - Why Small Parts Destroy Systems: clickhouse/03-why-small-parts-destroy-systems.md
+      - Merge Amplification (The Invisible Multiplier): clickhouse/04-merge-amplification.md
+      - Merge Selection & Starvation: clickhouse/05-merge-selection-and-starvation.md
+      - Order By - A Physical Design Tool: clickhouse/06-order-by-a-physical-design-tool
+      - Granules, Primary Index, and the Illusion of Skipping: clickhouse/07-granules-primay-index-illusion-of-skipping.md
+      - IO Vs CPU - Finding The Real Bottleneck: clickhouse/08-io-vs-cpu-finding-the-real-bottleneck.md
+      - When Optimization Stopes Working: 09-when-optimization-stops-working.md
+      - Pre-aggregation, Multi-tenancy and System Boundaries: 10-pre-aggregation-multi-tenancy-and-system-boundaries.md
 
 markdown_extensions:
   - admonition

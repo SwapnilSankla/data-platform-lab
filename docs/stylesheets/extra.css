@@ -1,29 +1,106 @@
-/* Import modern UI fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+/* ------------------------------------------------ */
+/* Typography                                       */
+/* ------------------------------------------------ */
 
-:root {
-  --md-primary-fg-color: #4f46e5;
-  --md-accent-fg-color: #2563eb;
-  --md-text-font: "Inter", system-ui, -apple-system, sans-serif;
-  --md-code-font: "JetBrains Mono", monospace;
+.md-typeset h1 {
+    font-weight: 800;
 }
 
-.md-content {
-  font-size: 0.95rem;
-  line-height: 1.7;
+.md-typeset h2 {
+    margin-top: 2rem;
+    font-weight: 700;
 }
 
-
-/* Improve readability */
-body {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+.md-typeset h3 {
+    font-weight: 600;
 }
 
-/* Improve headings hierarchy */
-h1, h2, h3 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
+/* ------------------------------------------------ */
+/* Sidebar layout                                   */
+/* ------------------------------------------------ */
+
+/* Draw vertical tree lines */
+
+.md-nav--secondary .md-nav__list,
+.md-nav--primary .md-nav__list .md-nav__list {
+    border-left: 1px solid rgba(128, 128, 128, 0.25);
+    margin-left: 0.6rem;
+    padding-left: 0.8rem;
+}
+
+/* Indent nested items */
+
+.md-nav__item .md-nav__item {
+    margin-left: 0.3rem;
+}
+
+/* ------------------------------------------------ */
+/* Sidebar typography                               */
+/* ------------------------------------------------ */
+
+/* Top-level sections:
+   🧱 Lakehouse
+   ⚙️ Spark
+*/
+
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* Section titles */
+
+.md-nav__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Individual pages */
+
+.md-nav__item .md-nav__link {
+    font-size: 0.82rem;
+    font-weight: 400;
+}
+
+/* Active page */
+
+.md-nav__link--active {
+    font-weight: 600;
+}
+
+/* ------------------------------------------------ */
+/* Code blocks                                      */
+/* ------------------------------------------------ */
+
+.md-typeset code {
+    font-size: 0.85rem;
+}
+
+.md-typeset pre code {
+    font-size: 0.82rem;
+}
+
+/* ------------------------------------------------ */
+/* Tables                                           */
+/* ------------------------------------------------ */
+
+.md-typeset table {
+    font-size: 0.9rem;
+}
+
+/* ------------------------------------------------ */
+/* Smooth transitions                               */
+/* ------------------------------------------------ */
+
+.md-nav__link {
+    transition: all 0.15s ease;
+}
+
+/* ------------------------------------------------ */
+/* Optional: wider content area                     */
+/* ------------------------------------------------ */
+
+.md-grid {
+    max-width: 1500px;
 }
