@@ -1,17 +1,17 @@
 # Sort Merge Join in Apache Spark
 
-# Why Joins Are Hard in Distributed Systems
+## Why Joins Are Hard in Distributed Systems
 
 Suppose we have two datasets:
 
-## Events Dataset
+### Events Dataset
 
 | user_id | event_type |
 | ------- | ---------- |
 | 1       | click      |
 | 2       | view       |
 
-## Users Dataset
+### Users Dataset
 
 | user_id | country |
 | ------- | ------- |
@@ -31,7 +31,7 @@ This is the core distributed join problem.
 
 ---
 
-# Two Fundamental Distributed Join Strategies
+## Two Fundamental Distributed Join Strategies
 
 Distributed systems generally solve joins using one of two approaches:
 
@@ -44,7 +44,7 @@ Distributed systems generally solve joins using one of two approaches:
 
 ---
 
-# Example Pipeline
+## Example Pipeline
 
 ```python
 from pyspark.sql import SparkSession
@@ -68,7 +68,7 @@ joined_df.count()
 
 ---
 
-# Physical Plan
+## Physical Plan
 
 ```text
 == Physical Plan ==
@@ -97,7 +97,7 @@ AdaptiveSparkPlan
 
 ---
 
-# Initial Plan vs Final Plan
+## Initial Plan vs Final Plan
 
 Spark physical plans exist in two forms:
 
@@ -131,19 +131,19 @@ after execution completes.
 
 ---
 
-# Step-by-Step Execution Walkthrough
+## Step-by-Step Execution Walkthrough
 
-# 1. Scan Source Data
+### 1. Scan Source Data
 
 Spark first scans both datasets.
 
-## Events Dataset
+#### Events Dataset
 
 ```text
 Scan csv
 ```
 
-## Users Dataset
+#### Users Dataset
 
 ```text
 Scan parquet
@@ -151,7 +151,7 @@ Scan parquet
 
 ---
 
-# Important Observation: CSV vs Parquet
+#### Important Observation: CSV vs Parquet
 
 CSV scan:
 
@@ -177,7 +177,7 @@ This is one major reason why Parquet significantly outperforms CSV.
 
 ---
 
-# 2. Catalyst Adds Null Filters
+### 2. Catalyst Adds Null Filters
 
 Spark automatically inserts:
 
@@ -197,7 +197,7 @@ This optimization is automatically added by Catalyst.
 
 ---
 
-# 3. Exchange — Shuffle Boundary
+### 3. Exchange — Shuffle Boundary
 
 Spark then performs:
 
@@ -224,7 +224,7 @@ This is the core requirement for distributed joins.
 
 ---
 
-# Extremely Important Clarification
+#### Extremely Important Clarification
 
 `Exchange` is a logical shuffle boundary.
 
@@ -240,13 +240,13 @@ data must be redistributed by key
 
 ---
 
-# Actual Shuffle Mechanics
+#### Actual Shuffle Mechanics
 
 Shuffle internally happens in two phases.
 
 ---
 
-# Map-Side Shuffle Phase
+#### Map-Side Shuffle Phase
 
 Map-side tasks:
 
@@ -269,7 +269,7 @@ At this point:
 
 ---
 
-# Reduce-Side Shuffle Phase
+#### Reduce-Side Shuffle Phase
 
 Reducer tasks later:
 
@@ -291,7 +291,7 @@ This design comes from Hadoop MapReduce architecture.
 
 ---
 
-# Important Mental Model
+#### Important Mental Model
 
 ```text
 Exchange
@@ -308,7 +308,7 @@ This is one of the most important Spark internals concepts.
 
 ---
 
-# 4. ShuffleQueryStage
+### 4. ShuffleQueryStage
 
 After shuffle writes complete, Spark creates:
 
@@ -337,7 +337,7 @@ This information is used by AQE.
 
 ---
 
-# 5. AQEShuffleRead
+### 5. AQEShuffleRead
 
 Spark then performs:
 
@@ -366,7 +366,7 @@ This improves:
 
 ---
 
-# 6. Sort Within Partition
+### 6. Sort Within Partition
 
 After reducers fetch shuffle data:
 
@@ -392,7 +392,7 @@ This distinction is extremely important.
 
 ---
 
-# Why Sorting Is Required
+#### Why Sorting Is Required
 
 Once both datasets are:
 
@@ -417,7 +417,7 @@ This approach is:
 
 ---
 
-# 7. SortMergeJoin Execution
+### 7. SortMergeJoin Execution
 
 Now both sides contain:
 
@@ -443,7 +443,7 @@ The actual `SortMergeJoin` operator is:
 
 ---
 
-# Extremely Important Distinction
+#### Extremely Important Distinction
 
 | Phase          | Purpose                    |
 | -------------- | -------------------------- |
@@ -456,7 +456,7 @@ This is a foundational Spark execution concept.
 
 ---
 
-# 8. ColumnarToRow
+### 8. ColumnarToRow
 
 Parquet scan shows:
 
@@ -487,7 +487,7 @@ This becomes important later while learning:
 
 ---
 
-# 9. Count Aggregation
+### 9. Count Aggregation
 
 The query ends with:
 
@@ -499,7 +499,7 @@ Spark implements this using distributed aggregation.
 
 ---
 
-# Partial Aggregation
+### Partial Aggregation
 
 Each partition first computes:
 
@@ -516,7 +516,7 @@ This reduces:
 
 ---
 
-# Final Aggregation
+### Final Aggregation
 
 Spark then performs:
 
@@ -540,7 +540,7 @@ This is a classic distributed aggregation pattern.
 
 ---
 
-# Why SortMergeJoin Scales Well
+## Why SortMergeJoin Scales Well
 
 Unlike large hash joins:
 
@@ -557,7 +557,7 @@ This makes it:
 
 ---
 
-# Why SortMergeJoin Is Expensive
+## Why SortMergeJoin Is Expensive
 
 Even though merge computation itself is efficient:
 
@@ -583,9 +583,9 @@ NOT:
 
 ---
 
-# Most Important Mental Models
+## Most Important Mental Models
 
-# 1. Distributed Joins Mean Colocating Keys
+### 1. Distributed Joins Mean Colocating Keys
 
 ```text
 matching keys must land together
@@ -595,7 +595,7 @@ This is the core distributed join requirement.
 
 ---
 
-# 2. Exchange Is Logical
+### 2. Exchange Is Logical
 
 `Exchange` represents:
 
@@ -608,7 +608,7 @@ Internally implemented via:
 
 ---
 
-# 3. Shuffle Is Pull-Based
+### 3. Shuffle Is Pull-Based
 
 Reducers:
 
@@ -620,7 +620,7 @@ Spark shuffle is fundamentally:
 
 ---
 
-# 4. Sort Happens After Shuffle Fetch
+### 4. Sort Happens After Shuffle Fetch
 
 Sorting occurs:
 
@@ -633,7 +633,7 @@ NOT:
 
 ---
 
-# 5. SortMergeJoin Itself Is Local
+### 5. SortMergeJoin Itself Is Local
 
 Actual join computation:
 
@@ -642,7 +642,7 @@ Actual join computation:
 
 ---
 
-# 6. AQE Optimizes Runtime Execution
+### 6. AQE Optimizes Runtime Execution
 
 AQE can:
 
@@ -656,7 +656,7 @@ based on:
 
 ---
 
-# 7. Most Join Cost Comes From Shuffle
+### 7. Most Join Cost Comes From Shuffle
 
 The expensive part is:
 
@@ -670,7 +670,7 @@ NOT:
 
 ---
 
-# Related Concepts
+## Related Concepts
 
 * Shuffle
 * AQE

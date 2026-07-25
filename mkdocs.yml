@@ -69,6 +69,7 @@ nav:
       - Storage Model: lakehouse/02-row-vs-column-storage.md
       - Parquet Anatomy: lakehouse/03-anatomy-of-a-parquet-file.md
       - Row Groups: lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file.md
+      - How Parquet Reconstructs Rows: lakehouse/05-inside-a-column-chunk:how-parquet-reconstruct-rows.md
       - Concepts:
           - Object Storage vs Lake vs Lakehouse: lakehouse/object-storage-vs-lake-vs-lakehouse.md
   - ClickHouse:

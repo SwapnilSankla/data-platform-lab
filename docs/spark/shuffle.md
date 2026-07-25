@@ -1,6 +1,6 @@
 # Shuffle in Apache Spark
 
-# Concept
+## Concept
 
 Shuffle is one of the most important concepts in Apache Spark.
 
@@ -22,7 +22,7 @@ It is often the most expensive operation in Spark workloads.
 
 ---
 
-# Why Shuffle Exists
+## Why Shuffle Exists
 
 Spark initially processes data partition-locally.
 
@@ -55,7 +55,7 @@ This redistribution process is called shuffle.
 
 ---
 
-# Extremely Important Mental Model
+## Extremely Important Mental Model
 
 Without shuffle:
 
@@ -87,7 +87,7 @@ This is why shuffle is expensive.
 
 ---
 
-# Shuffle Lifecycle
+## Shuffle Lifecycle
 
 Shuffle is not a single operation.
 
@@ -95,7 +95,7 @@ It is a multi-stage distributed protocol.
 
 ---
 
-# Stage 1 — Map Side Processing
+### Stage 1 — Map Side Processing
 
 Suppose we execute:
 
@@ -113,7 +113,7 @@ Each map task:
 
 ---
 
-# Map-Side Aggregation
+#### Map-Side Aggregation
 
 Spark tries to reduce shuffle volume early.
 
@@ -138,7 +138,7 @@ This significantly reduces network traffic.
 
 ---
 
-# Important Clarification
+#### Important Clarification
 
 Not all shuffle operations involve aggregation.
 
@@ -161,7 +161,7 @@ Aggregation is sometimes an optimization applied before shuffle.
 
 ---
 
-# Stage 2 — Shuffle Write
+### Stage 2 — Shuffle Write
 
 After processing:
 - map tasks hash records by reducer partition
@@ -202,7 +202,7 @@ usually:
 
 ---
 
-# Stage 3 — Shuffle Read
+### Stage 3 — Shuffle Read
 
 Reducer tasks start later.
 
@@ -230,7 +230,7 @@ This is a very important mental model.
 
 ---
 
-# Why Spark Uses Pull-Based Shuffle
+## Why Spark Uses Pull-Based Shuffle
 
 Map tasks and reduce tasks are decoupled through shuffle materialization.
 
@@ -249,7 +249,7 @@ Materialized shuffle outputs make this possible.
 
 ---
 
-# Shuffle Creates Stage Boundaries
+## Shuffle Creates Stage Boundaries
 
 This is one of Spark's most important execution rules.
 
@@ -277,13 +277,13 @@ typically produces:
 
 ---
 
-# Shuffle Is Expensive
+## Shuffle Is Expensive
 
 Shuffle is expensive because it introduces:
 
 ---
 
-## 1. Network IO
+### 1. Network IO
 
 Executors exchange shuffle blocks over the network.
 
@@ -291,7 +291,7 @@ Distributed network communication is expensive.
 
 ---
 
-## 2. Disk IO
+### 2. Disk IO
 
 Shuffle outputs are often written to local disk.
 
@@ -301,7 +301,7 @@ Large shuffles may generate:
 
 ---
 
-## 3. Serialization & Deserialization
+### 3. Serialization & Deserialization
 
 Data transferred between executors must be:
 - serialized
@@ -312,7 +312,7 @@ This introduces CPU overhead.
 
 ---
 
-## 4. Sorting & Merging
+### 4. Sorting & Merging
 
 Shuffle often requires:
 - sorting
@@ -326,7 +326,7 @@ These operations consume:
 
 ---
 
-## 5. Synchronization Delays
+### 5. Synchronization Delays
 
 Reducers often wait for:
 - all map tasks to finish
@@ -335,7 +335,7 @@ This creates execution barriers.
 
 ---
 
-# Exchange Operator
+## Exchange Operator
 
 In physical plans:
 
@@ -350,7 +350,7 @@ This is one of the most important operators to recognize in Spark physical plans
 
 ---
 
-# Shuffle Partitions
+## Shuffle Partitions
 
 Shuffle outputs are redistributed into:
 
@@ -369,7 +369,7 @@ This setting determines:
 
 ---
 
-# Partition Tradeoffs
+## Partition Tradeoffs
 
 Too many shuffle partitions:
 - scheduling overhead increases
@@ -384,7 +384,7 @@ Proper partition sizing is extremely important.
 
 ---
 
-# Shuffle and repartition()
+## Shuffle and repartition()
 
 ```python
 df.repartition(10)
@@ -398,7 +398,7 @@ This creates balanced partitions but is expensive.
 
 ---
 
-# Shuffle and coalesce()
+## Shuffle and coalesce()
 
 ```python
 df.coalesce(2)
@@ -418,7 +418,7 @@ This minimizes:
 
 ---
 
-# Data Skew
+## Data Skew
 
 One of the biggest real-world Spark problems is:
 
@@ -447,7 +447,7 @@ Skew is one of the most important production optimization problems.
 
 ---
 
-# Spill To Disk
+### Spill To Disk
 
 If shuffle memory becomes insufficient:
 
@@ -463,7 +463,7 @@ But increases:
 
 ---
 
-# Spark UI Observation
+## Spark UI Observation
 
 Shuffle becomes visible in Spark UI through:
 - additional stages
@@ -476,9 +476,9 @@ The Spark UI is one of the best tools for understanding shuffle behavior.
 
 ---
 
-# Common Misconceptions
+## Common Misconceptions
 
-## Misconception 1
+### Misconception 1
 
 Shuffle means direct row streaming between executors.
 
@@ -493,7 +493,7 @@ Spark fundamentally uses pull-based shuffle.
 
 ---
 
-## Misconception 2
+### Misconception 2
 
 Shuffle is purely memory operation.
 
@@ -506,7 +506,7 @@ Shuffle heavily involves:
 
 ---
 
-## Misconception 3
+### Misconception 3
 
 Only joins trigger shuffle.
 
@@ -519,7 +519,7 @@ Many wide transformations trigger shuffle:
 
 ---
 
-## Misconception 4
+### Misconception 4
 
 More partitions always improve performance.
 
@@ -528,7 +528,7 @@ Too many partitions create scheduling overhead.
 
 ---
 
-# Operational Impact
+## Operational Impact
 
 Most Spark performance bottlenecks are related to:
 - shuffle volume
@@ -544,7 +544,7 @@ Understanding shuffle is critical for:
 
 ---
 
-# Most Important Mental Shift
+## Most Important Mental Shift
 
 Distributed system cost is often dominated by:
 
@@ -565,7 +565,7 @@ This is one of the deepest lessons in Spark and distributed computing.
 
 ---
 
-# Related Concepts
+## Related Concepts
 
 - Narrow vs Wide Transformations
 - Jobs, Stages, and Tasks
