@@ -71,6 +71,11 @@ nav:
       - Row Groups: lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file.md
       - How Parquet Reconstructs Rows: lakehouse/05-how-parquet-reconstruct-rows.md
       - Inside a Column Chunk: lakehouse/06-inside-a-column-chunk.md
+      - How Parquet Encodes Data: lakehouse/07-how-parquet-encodes-data.md
+      - Dictionary Encoding: lakehouse/08-dictionary-encoding.md
+      - Run Length Encoding: lakehouse/09-run-length-encoding.md
+      - Bit Packing Encoding: lakehouse/10-bit-packing-encoding.md
+      - Compression: lakehouse/11-compression.md
       - Concepts:
           - Object Storage vs Lake vs Lakehouse: lakehouse/object-storage-vs-lake-vs-lakehouse.md
   - ClickHouse:
