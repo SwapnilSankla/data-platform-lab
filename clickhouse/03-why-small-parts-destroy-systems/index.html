@@ -1,0 +1,3014 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Building a production-grade Data Platform from first principles">
+      
+      
+      
+        <link rel="canonical" href="https://swapnilsankla.github.io/data-platform-lab/clickhouse/03-why-small-parts-destroy-systems/">
+      
+      
+        <link rel="prev" href="../02-the-hidden-cost-of-the-inserts/">
+      
+      
+        <link rel="next" href="../04-merge-amplification/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Why Small Parts Destroy Systems - Data Platform Lab</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#31-a-system-that-looks-almost-fine" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Data Platform Lab" class="md-header__button md-logo" aria-label="Data Platform Lab" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Data Platform Lab
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Why Small Parts Destroy Systems
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="blue"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="blue"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SwapnilSankla/data-platform-lab" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SwapnilSankla/data-platform-lab
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../spark/internal-execution-model/" class="md-tabs__link">
+          
+  
+  
+  Spark
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../lakehouse/01-evolution-of-modern-data-storage/" class="md-tabs__link">
+          
+  
+  
+  Lakehouse
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../01-why-clickhouse-rewrites-data/" class="md-tabs__link">
+          
+  
+  
+  ClickHouse
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Data Platform Lab" class="md-nav__button md-logo" aria-label="Data Platform Lab" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Data Platform Lab
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SwapnilSankla/data-platform-lab" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SwapnilSankla/data-platform-lab
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spark
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Spark
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Model
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execution Model
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/internal-execution-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Execution Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/lazy-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lazy Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/transformations-vs-actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformations vs Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical Execution
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Physical Execution
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/execution-partitions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Partitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/how-to-interpret-spark-physical-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Movement
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Movement
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/narrow-vs-wide-transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Narrow vs Wide Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/shuffle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shuffle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/repartition-vs-coalesce/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repartition vs Coalesce
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Query Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Query Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/joins/sort-merge-join/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sort Merge Join
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../spark/caching-and-persistence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caching and Persistence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lakehouse
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lakehouse
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/01-evolution-of-modern-data-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/02-row-vs-column-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/03-anatomy-of-a-parquet-file/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parquet Anatomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Row Groups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/05-how-parquet-reconstruct-rows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Parquet Reconstructs Rows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/06-inside-a-column-chunk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inside a Column Chunk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/07-how-parquet-encodes-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Parquet Encodes Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/08-dictionary-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dictionary Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/09-run-length-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Length Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/10-bit-packing-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bit Packing Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/11-compression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lakehouse/object-storage-vs-lake-vs-lakehouse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Object Storage vs Lake vs Lakehouse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClickHouse
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ClickHouse
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-why-clickhouse-rewrites-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why ClickHouse Rewrites Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-the-hidden-cost-of-the-inserts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Hidden Cost Of The Inserts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Small Parts Destroy Systems
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Small Parts Destroy Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#31-a-system-that-looks-almost-fine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 A System That Looks “Almost Fine”
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#32-the-first-wrong-explanation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 The First Wrong Explanation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#33-looking-deeper-what-is-a-small-part" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Looking Deeper: What Is a “Small Part”?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#34-why-size-matters-more-than-you-think" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Why Size Matters More Than You Think
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#35-the-merge-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 The Merge Ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#36-the-hidden-cost-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 The Hidden Cost: Depth
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#think-carefully" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Think Carefully
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Think Carefully">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#37-from-count-to-amplification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 From Count to Amplification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#38-a-concrete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 A Concrete Example
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.8 A Concrete Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#case-a-small-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case A — Small Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#case-b-larger-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case B — Larger Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Pause">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#39-the-compounding-effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.9 The Compounding Effect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#310-the-system-spiral" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.10 The System Spiral
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Key Insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#311-why-this-is-worse-in-object-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.11 Why This Is Worse in Object Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#312-the-misleading-stability-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.12 The Misleading Stability Phase
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#313-the-real-definition-of-healthy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.13 The Real Definition of “Healthy”
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Pause">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#314-the-correct-lever-revisited" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.14 The Correct Lever (Revisited)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#315-stress-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.15 Stress Test
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.15 Stress Test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#316-the-deep-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.16 The Deep Connection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#317-final-mental-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.17 Final Mental Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#318-closing-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.18 Closing Insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-merge-amplification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Merge Amplification (The Invisible Multiplier)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-merge-selection-and-starvation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Merge Selection & Starvation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-order-by-a-physical-design-tool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order By - A Physical Design Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-granules-primay-index-illusion-of-skipping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Granules, Primary Index, and the Illusion of Skipping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../08-io-vs-cpu-finding-the-real-bottleneck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IO Vs CPU - Finding The Real Bottleneck
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../09-when-optimization-stops-working/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Optimization Stopes Working
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../10-pre-aggregation-multi-tenancy-and-system-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-aggregation, Multi-tenancy and System Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#31-a-system-that-looks-almost-fine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 A System That Looks “Almost Fine”
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#32-the-first-wrong-explanation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 The First Wrong Explanation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#33-looking-deeper-what-is-a-small-part" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Looking Deeper: What Is a “Small Part”?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#34-why-size-matters-more-than-you-think" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Why Size Matters More Than You Think
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#35-the-merge-ladder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 The Merge Ladder
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#36-the-hidden-cost-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 The Hidden Cost: Depth
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#think-carefully" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Think Carefully
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Think Carefully">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#37-from-count-to-amplification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 From Count to Amplification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#38-a-concrete-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 A Concrete Example
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.8 A Concrete Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#case-a-small-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case A — Small Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#case-b-larger-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Case B — Larger Parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Pause">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#39-the-compounding-effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.9 The Compounding Effect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#310-the-system-spiral" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.10 The System Spiral
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Key Insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#311-why-this-is-worse-in-object-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.11 Why This Is Worse in Object Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#312-the-misleading-stability-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.12 The Misleading Stability Phase
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#313-the-real-definition-of-healthy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.13 The Real Definition of “Healthy”
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pause_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Pause
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🤔 Pause">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#314-the-correct-lever-revisited" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.14 The Correct Lever (Revisited)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#315-stress-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.15 Stress Test
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.15 Stress Test">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#answer_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Answer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#316-the-deep-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.16 The Deep Connection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#317-final-mental-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.17 Final Mental Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#318-closing-insight" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.18 Closing Insight
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/SwapnilSankla/data-platform-lab/edit/master/docs/clickhouse/03-why-small-parts-destroy-systems.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/SwapnilSankla/data-platform-lab/raw/master/docs/clickhouse/03-why-small-parts-destroy-systems.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+  <h1>Why Small Parts Destroy Systems</h1>
+
+<h2 id="31-a-system-that-looks-almost-fine">3.1 A System That Looks “Almost Fine”<a class="headerlink" href="#31-a-system-that-looks-almost-fine" title="Permanent link">&para;</a></h2>
+<p>Let’s construct a scenario.</p>
+<p>You’ve already learned your lesson from Chapter 2.</p>
+<p>So you are <strong>not</strong> inserting one row at a time.</p>
+<p>Instead:</p>
+<ul>
+<li>Batch size: ~50,000 rows</li>
+<li>Ingestion: steady</li>
+<li>Partitioning: time-based (reasonable)</li>
+</ul>
+<p>On paper, this should be fine.</p>
+<p>And initially — it is.</p>
+<hr />
+<p>After a few days:</p>
+<ul>
+<li>System is stable</li>
+<li>Queries are fast</li>
+<li>Merges are happening</li>
+</ul>
+<p>But as data grows:</p>
+<ul>
+<li>Merge backlog slowly increases</li>
+<li>IO usage keeps creeping up</li>
+<li>Some queries degrade</li>
+</ul>
+<p>Nothing catastrophic. Just… uncomfortable.</p>
+<hr />
+<h2 id="pause">🤔 Pause<a class="headerlink" href="#pause" title="Permanent link">&para;</a></h2>
+<p>You’re already batching.</p>
+<p>So ask yourself:</p>
+<blockquote>
+<p>Why is the system still struggling?
+</p>
+</blockquote>
+<hr />
+<h2 id="32-the-first-wrong-explanation">3.2 The First Wrong Explanation<a class="headerlink" href="#32-the-first-wrong-explanation" title="Permanent link">&para;</a></h2>
+<p>A common reaction:</p>
+<blockquote>
+<p>“Maybe we need more hardware.”
+</p>
+</blockquote>
+<p>That might help temporarily.</p>
+<p>But you already know from Chapter 1:</p>
+<blockquote>
+<p>IO problems often come from amplification, not raw volume.
+</p>
+</blockquote>
+<p>So adding hardware may just delay the problem.</p>
+<hr />
+<h2 id="33-looking-deeper-what-is-a-small-part">3.3 Looking Deeper: What Is a “Small Part”?<a class="headerlink" href="#33-looking-deeper-what-is-a-small-part" title="Permanent link">&para;</a></h2>
+<p>We need to define this carefully.</p>
+<p>A “small part” is not about rows alone.</p>
+<p>It is about:</p>
+<ul>
+<li>Total size (MB/GB)</li>
+<li>Number of granules</li>
+<li>How much work it represents in merges</li>
+</ul>
+<p>For example:</p>
+<ul>
+<li>50k rows might be:<ul>
+<li>~5–20 MB (depending on schema)</li>
+</ul>
+</li>
+</ul>
+<p>That is <strong>tiny</strong> in analytical systems.</p>
+<hr />
+<h2 id="34-why-size-matters-more-than-you-think">3.4 Why Size Matters More Than You Think<a class="headerlink" href="#34-why-size-matters-more-than-you-think" title="Permanent link">&para;</a></h2>
+<p>Let’s imagine your system is continuously creating these small parts.</p>
+<p>Every second:</p>
+<ul>
+<li>New 50k-row parts arrive</li>
+<li>Merge system starts working</li>
+</ul>
+<p>Now, think about how parts evolve.</p>
+<hr />
+<h2 id="pause_1">🤔 Pause<a class="headerlink" href="#pause_1" title="Permanent link">&para;</a></h2>
+<p>If you start with many small parts, how do you get to large parts?</p>
+<hr />
+<h2 id="35-the-merge-ladder">3.5 The Merge Ladder<a class="headerlink" href="#35-the-merge-ladder" title="Permanent link">&para;</a></h2>
+<p>Parts don’t jump from small → huge instantly.</p>
+<p>They grow gradually:</p>
+<pre><code>Level 0: 50k rows
+Level 1: 200k rows
+Level 2: 800k rows
+Level 3: 3M rows
+Level 4: 12M rows
+...
+</code></pre>
+<p>Each level requires a <strong>merge</strong>.</p>
+<p>Each merge requires:</p>
+<ul>
+<li>Reading input parts</li>
+<li>Writing output part</li>
+</ul>
+<hr />
+<h2 id="36-the-hidden-cost-depth">3.6 The Hidden Cost: Depth<a class="headerlink" href="#36-the-hidden-cost-depth" title="Permanent link">&para;</a></h2>
+<p>Now we arrive at the real issue.</p>
+<p>Small parts don’t just increase count.</p>
+<p>They increase <strong>merge depth</strong>.</p>
+<hr />
+<h2 id="think-carefully">🤔 Think Carefully<a class="headerlink" href="#think-carefully" title="Permanent link">&para;</a></h2>
+<p>If you start with:</p>
+<ul>
+<li>Very small parts → many levels needed</li>
+<li>Larger parts → fewer levels needed</li>
+</ul>
+<p>Which system rewrites data more times?</p>
+<hr />
+<h3 id="answer">Answer<a class="headerlink" href="#answer" title="Permanent link">&para;</a></h3>
+<p>The one with smaller parts.</p>
+<hr />
+<h2 id="37-from-count-to-amplification">3.7 From Count to Amplification<a class="headerlink" href="#37-from-count-to-amplification" title="Permanent link">&para;</a></h2>
+<p>Let’s connect this with Chapter 1.</p>
+<p>If each level rewrites data:</p>
+<ul>
+<li>Small parts → more levels → more rewrites</li>
+<li>Large parts → fewer levels → fewer rewrites</li>
+</ul>
+<p>So:</p>
+<pre><code>smaller parts → higher amplification
+</code></pre>
+<hr />
+<h2 id="38-a-concrete-example">3.8 A Concrete Example<a class="headerlink" href="#38-a-concrete-example" title="Permanent link">&para;</a></h2>
+<p>Let’s make this tangible.</p>
+<h3 id="case-a-small-parts">Case A — Small Parts<a class="headerlink" href="#case-a-small-parts" title="Permanent link">&para;</a></h3>
+<p>Start with 50k rows per part:</p>
+<ul>
+<li>Need ~5 merge levels to reach large part</li>
+<li>Each row rewritten ~5 times</li>
+</ul>
+<hr />
+<h3 id="case-b-larger-parts">Case B — Larger Parts<a class="headerlink" href="#case-b-larger-parts" title="Permanent link">&para;</a></h3>
+<p>Start with 500k rows per part:</p>
+<ul>
+<li>Need ~2 merge levels</li>
+<li>Each row rewritten ~2 times</li>
+</ul>
+<hr />
+<h2 id="pause_2">🤔 Pause<a class="headerlink" href="#pause_2" title="Permanent link">&para;</a></h2>
+<p>Same data.</p>
+<p>Which system generates more IO?</p>
+<hr />
+<h3 id="answer_1">Answer<a class="headerlink" href="#answer_1" title="Permanent link">&para;</a></h3>
+<p>Case A — significantly more.</p>
+<hr />
+<h2 id="39-the-compounding-effect">3.9 The Compounding Effect<a class="headerlink" href="#39-the-compounding-effect" title="Permanent link">&para;</a></h2>
+<p>Here’s the subtlety:</p>
+<p>This is not linear.</p>
+<p>It compounds.</p>
+<p>Because:</p>
+<ul>
+<li>More parts → more merges</li>
+<li>More merges → more IO</li>
+<li>More IO → slower merges</li>
+<li>Slower merges → backlog grows</li>
+<li>Backlog → even more parts</li>
+</ul>
+<p>This is a <strong>feedback loop</strong>.</p>
+<hr />
+<h2 id="310-the-system-spiral">3.10 The System Spiral<a class="headerlink" href="#310-the-system-spiral" title="Permanent link">&para;</a></h2>
+<p>Let’s describe the failure mode:</p>
+<ol>
+<li>Small parts created frequently</li>
+<li>Merge system tries to catch up</li>
+<li>IO increases</li>
+<li>Merge speed drops (IO contention)</li>
+<li>Parts accumulate</li>
+<li>Even more merges required</li>
+<li>System enters unstable state</li>
+</ol>
+<hr />
+<h2 id="key-insight">💡 Key Insight<a class="headerlink" href="#key-insight" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>Small parts don’t just increase work.</p>
+<p>They create a <strong>self-reinforcing instability loop</strong>.
+</p>
+</blockquote>
+<hr />
+<h2 id="311-why-this-is-worse-in-object-storage">3.11 Why This Is Worse in Object Storage<a class="headerlink" href="#311-why-this-is-worse-in-object-storage" title="Permanent link">&para;</a></h2>
+<p>(We’ll go deeper later, but a preview)</p>
+<p>Each part:</p>
+<ul>
+<li>Is a set of files / objects</li>
+<li>Requires network IO</li>
+<li>Has latency overhead</li>
+</ul>
+<p>So:</p>
+<ul>
+<li>More parts → more requests</li>
+<li>More requests → more latency</li>
+<li>More latency → slower merges</li>
+</ul>
+<p>Small parts amplify this effect.</p>
+<hr />
+<h2 id="312-the-misleading-stability-phase">3.12 The Misleading Stability Phase<a class="headerlink" href="#312-the-misleading-stability-phase" title="Permanent link">&para;</a></h2>
+<p>This is important.</p>
+<p>Small parts don’t break the system immediately.</p>
+<p>They:</p>
+<ul>
+<li>Work fine at small scale</li>
+<li>Gradually degrade</li>
+<li>Fail only after accumulation</li>
+</ul>
+<p>This is why teams often:</p>
+<blockquote>
+<p>“Don’t see the problem coming”
+</p>
+</blockquote>
+<hr />
+<h2 id="313-the-real-definition-of-healthy">3.13 The Real Definition of “Healthy”<a class="headerlink" href="#313-the-real-definition-of-healthy" title="Permanent link">&para;</a></h2>
+<p>A healthy system is not:</p>
+<ul>
+<li>Low CPU</li>
+<li>Fast queries</li>
+</ul>
+<p>A healthy system is:</p>
+<blockquote>
+<p>Parts are growing steadily into larger sizes
+</p>
+</blockquote>
+<hr />
+<h2 id="pause_3">🤔 Pause<a class="headerlink" href="#pause_3" title="Permanent link">&para;</a></h2>
+<p>If you observe:</p>
+<ul>
+<li>Many small parts</li>
+<li>Few large parts</li>
+</ul>
+<p>What does that indicate?</p>
+<hr />
+<h3 id="answer_2">Answer<a class="headerlink" href="#answer_2" title="Permanent link">&para;</a></h3>
+<p>Merge pipeline is not progressing.</p>
+<p>System is at risk.</p>
+<hr />
+<h2 id="314-the-correct-lever-revisited">3.14 The Correct Lever (Revisited)<a class="headerlink" href="#314-the-correct-lever-revisited" title="Permanent link">&para;</a></h2>
+<p>At this point, the solution becomes clearer.</p>
+<p>To fix small-part problems:</p>
+<ul>
+<li>Increase batch size</li>
+<li>Reduce parts/sec</li>
+<li>Ensure parts start larger</li>
+</ul>
+<p>Not:</p>
+<ul>
+<li>Change ORDER BY</li>
+<li>Add indexes</li>
+<li>Tune queries</li>
+</ul>
+<hr />
+<h2 id="315-stress-test">3.15 Stress Test<a class="headerlink" href="#315-stress-test" title="Permanent link">&para;</a></h2>
+<p>Suppose:</p>
+<ul>
+<li>You double batch size</li>
+<li>Parts become 2× larger</li>
+</ul>
+<p>What happens?</p>
+<hr />
+<p>Pause.</p>
+<hr />
+<h3 id="answer_3">Answer<a class="headerlink" href="#answer_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Merge levels reduce</li>
+<li>Rewrite count reduces</li>
+<li>IO reduces</li>
+<li>System stabilizes</li>
+</ul>
+<hr />
+<h2 id="316-the-deep-connection">3.16 The Deep Connection<a class="headerlink" href="#316-the-deep-connection" title="Permanent link">&para;</a></h2>
+<p>Now connect Chapters 1–3:</p>
+<ul>
+<li>Chapter 1: Data is rewritten</li>
+<li>Chapter 2: Parts control merge workload</li>
+<li>Chapter 3: Part size controls rewrite depth</li>
+</ul>
+<hr />
+<h2 id="317-final-mental-model">3.17 Final Mental Model<a class="headerlink" href="#317-final-mental-model" title="Permanent link">&para;</a></h2>
+<p>You can now think of the system as:</p>
+<pre><code>Insert → Parts → Merge Levels → IO → Stability
+</code></pre>
+<p>And the most powerful lever is:</p>
+<blockquote>
+<p>Part size at creation
+</p>
+</blockquote>
+<hr />
+<h2 id="318-closing-insight">3.18 Closing Insight<a class="headerlink" href="#318-closing-insight" title="Permanent link">&para;</a></h2>
+<p>If you remember one thing:</p>
+<blockquote>
+<p>Small parts are dangerous not because they are many,</p>
+<p>but because they force the system to rewrite data <em>many more times</em>.
+</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.tabs.link", "search.suggest", "search.highlight", "toc.follow", "content.action.edit", "content.action.view"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

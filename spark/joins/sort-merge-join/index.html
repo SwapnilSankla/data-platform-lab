@@ -1,0 +1,3553 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Building a production-grade Data Platform from first principles">
+      
+      
+      
+        <link rel="canonical" href="https://swapnilsankla.github.io/data-platform-lab/spark/joins/sort-merge-join/">
+      
+      
+        <link rel="prev" href="../../repartition-vs-coalesce/">
+      
+      
+        <link rel="next" href="../../caching-and-persistence/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Sort Merge Join - Data Platform Lab</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sort-merge-join-in-apache-spark" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Data Platform Lab" class="md-header__button md-logo" aria-label="Data Platform Lab" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Data Platform Lab
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Sort Merge Join
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="blue"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="blue"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SwapnilSankla/data-platform-lab" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SwapnilSankla/data-platform-lab
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../internal-execution-model/" class="md-tabs__link">
+          
+  
+  
+  Spark
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../lakehouse/01-evolution-of-modern-data-storage/" class="md-tabs__link">
+          
+  
+  
+  Lakehouse
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../clickhouse/01-why-clickhouse-rewrites-data/" class="md-tabs__link">
+          
+  
+  
+  ClickHouse
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Data Platform Lab" class="md-nav__button md-logo" aria-label="Data Platform Lab" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Data Platform Lab
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SwapnilSankla/data-platform-lab" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SwapnilSankla/data-platform-lab
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spark
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Spark
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Model
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execution Model
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internal-execution-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internal Execution Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lazy-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lazy Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../transformations-vs-actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformations vs Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical Execution
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Physical Execution
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../execution-partitions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution Partitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to-interpret-spark-physical-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Physical Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Movement
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Movement
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../narrow-vs-wide-transformations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Narrow vs Wide Transformations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shuffle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shuffle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../repartition-vs-coalesce/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repartition vs Coalesce
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Query Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Query Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sort Merge Join
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sort Merge Join
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-joins-are-hard-in-distributed-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Joins Are Hard in Distributed Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why Joins Are Hard in Distributed Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#events-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#users-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Users Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-fundamental-distributed-join-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Fundamental Distributed Join Strategies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#physical-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Physical Plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initial-plan-vs-final-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initial Plan vs Final Plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-by-step-execution-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-Step Execution Walkthrough
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-Step Execution Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scan-source-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Scan Source Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Scan Source Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#events-dataset_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#users-dataset_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Users Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-observation-csv-vs-parquet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Observation: CSV vs Parquet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-catalyst-adds-null-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Catalyst Adds Null Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-exchange-shuffle-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Exchange — Shuffle Boundary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Exchange — Shuffle Boundary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extremely-important-clarification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extremely Important Clarification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actual-shuffle-mechanics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actual Shuffle Mechanics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#map-side-shuffle-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map-Side Shuffle Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reduce-side-shuffle-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reduce-Side Shuffle Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-mental-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Mental Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-shufflequerystage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. ShuffleQueryStage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-aqeshuffleread" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. AQEShuffleRead
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-sort-within-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Sort Within Partition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Sort Within Partition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-sorting-is-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Sorting Is Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-sortmergejoin-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. SortMergeJoin Execution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. SortMergeJoin Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extremely-important-distinction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extremely Important Distinction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-columnartorow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ColumnarToRow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-count-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Count Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partial-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#final-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Final Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-sortmergejoin-scales-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SortMergeJoin Scales Well
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-sortmergejoin-is-expensive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SortMergeJoin Is Expensive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#most-important-mental-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Most Important Mental Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Most Important Mental Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-distributed-joins-mean-colocating-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Distributed Joins Mean Colocating Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-exchange-is-logical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Exchange Is Logical
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-shuffle-is-pull-based" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Shuffle Is Pull-Based
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-sort-happens-after-shuffle-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Sort Happens After Shuffle Fetch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-sortmergejoin-itself-is-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. SortMergeJoin Itself Is Local
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-aqe-optimizes-runtime-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. AQE Optimizes Runtime Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-most-join-cost-comes-from-shuffle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Most Join Cost Comes From Shuffle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Performance
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../caching-and-persistence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caching and Persistence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lakehouse
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Lakehouse
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/01-evolution-of-modern-data-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evolution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/02-row-vs-column-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/03-anatomy-of-a-parquet-file/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parquet Anatomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/04-row-groups-the-unit-of-parallelism-in-a-parquet-file/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Row Groups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/05-how-parquet-reconstruct-rows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Parquet Reconstructs Rows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/06-inside-a-column-chunk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inside a Column Chunk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/07-how-parquet-encodes-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Parquet Encodes Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/08-dictionary-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dictionary Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/09-run-length-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run Length Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/10-bit-packing-encoding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bit Packing Encoding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/11-compression/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../lakehouse/object-storage-vs-lake-vs-lakehouse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Object Storage vs Lake vs Lakehouse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClickHouse
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ClickHouse
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/01-why-clickhouse-rewrites-data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why ClickHouse Rewrites Data
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/02-the-hidden-cost-of-the-inserts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Hidden Cost Of The Inserts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/03-why-small-parts-destroy-systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Small Parts Destroy Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/04-merge-amplification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Merge Amplification (The Invisible Multiplier)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/05-merge-selection-and-starvation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Merge Selection & Starvation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/06-order-by-a-physical-design-tool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order By - A Physical Design Tool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/07-granules-primay-index-illusion-of-skipping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Granules, Primary Index, and the Illusion of Skipping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/08-io-vs-cpu-finding-the-real-bottleneck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IO Vs CPU - Finding The Real Bottleneck
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/09-when-optimization-stops-working/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Optimization Stopes Working
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../clickhouse/10-pre-aggregation-multi-tenancy-and-system-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pre-aggregation, Multi-tenancy and System Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-joins-are-hard-in-distributed-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Joins Are Hard in Distributed Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Why Joins Are Hard in Distributed Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#events-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#users-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Users Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-fundamental-distributed-join-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Fundamental Distributed Join Strategies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#physical-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Physical Plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initial-plan-vs-final-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initial Plan vs Final Plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-by-step-execution-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-Step Execution Walkthrough
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step-by-Step Execution Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scan-source-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Scan Source Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Scan Source Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#events-dataset_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#users-dataset_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Users Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-observation-csv-vs-parquet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Observation: CSV vs Parquet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-catalyst-adds-null-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Catalyst Adds Null Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-exchange-shuffle-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Exchange — Shuffle Boundary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Exchange — Shuffle Boundary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extremely-important-clarification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extremely Important Clarification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actual-shuffle-mechanics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Actual Shuffle Mechanics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#map-side-shuffle-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map-Side Shuffle Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reduce-side-shuffle-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reduce-Side Shuffle Phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-mental-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Mental Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-shufflequerystage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. ShuffleQueryStage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-aqeshuffleread" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. AQEShuffleRead
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-sort-within-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Sort Within Partition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Sort Within Partition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-sorting-is-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Sorting Is Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-sortmergejoin-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. SortMergeJoin Execution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. SortMergeJoin Execution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extremely-important-distinction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extremely Important Distinction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-columnartorow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. ColumnarToRow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-count-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Count Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partial-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#final-aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Final Aggregation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-sortmergejoin-scales-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SortMergeJoin Scales Well
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-sortmergejoin-is-expensive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SortMergeJoin Is Expensive
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#most-important-mental-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Most Important Mental Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Most Important Mental Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-distributed-joins-mean-colocating-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Distributed Joins Mean Colocating Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-exchange-is-logical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Exchange Is Logical
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-shuffle-is-pull-based" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Shuffle Is Pull-Based
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-sort-happens-after-shuffle-fetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Sort Happens After Shuffle Fetch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-sortmergejoin-itself-is-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. SortMergeJoin Itself Is Local
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-aqe-optimizes-runtime-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. AQE Optimizes Runtime Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-most-join-cost-comes-from-shuffle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Most Join Cost Comes From Shuffle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/SwapnilSankla/data-platform-lab/edit/master/docs/spark/joins/sort-merge-join.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/SwapnilSankla/data-platform-lab/raw/master/docs/spark/joins/sort-merge-join.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="sort-merge-join-in-apache-spark">Sort Merge Join in Apache Spark<a class="headerlink" href="#sort-merge-join-in-apache-spark" title="Permanent link">&para;</a></h1>
+<h2 id="why-joins-are-hard-in-distributed-systems">Why Joins Are Hard in Distributed Systems<a class="headerlink" href="#why-joins-are-hard-in-distributed-systems" title="Permanent link">&para;</a></h2>
+<p>Suppose we have two datasets:</p>
+<h3 id="events-dataset">Events Dataset<a class="headerlink" href="#events-dataset" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>user_id</th>
+<th>event_type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>click</td>
+</tr>
+<tr>
+<td>2</td>
+<td>view</td>
+</tr>
+</tbody>
+</table>
+<h3 id="users-dataset">Users Dataset<a class="headerlink" href="#users-dataset" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>user_id</th>
+<th>country</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>IN</td>
+</tr>
+<tr>
+<td>2</td>
+<td>US</td>
+</tr>
+</tbody>
+</table>
+<p>In a distributed cluster:</p>
+<ul>
+<li>rows from both datasets may exist on different executors</li>
+<li>Spark cannot directly join them</li>
+</ul>
+<p>Before joining:</p>
+<ul>
+<li>matching keys must be colocated together</li>
+</ul>
+<p>This is the core distributed join problem.</p>
+<hr />
+<h2 id="two-fundamental-distributed-join-strategies">Two Fundamental Distributed Join Strategies<a class="headerlink" href="#two-fundamental-distributed-join-strategies" title="Permanent link">&para;</a></h2>
+<p>Distributed systems generally solve joins using one of two approaches:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Idea</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shuffle Join</td>
+<td>Move matching keys together</td>
+</tr>
+<tr>
+<td>Broadcast Join</td>
+<td>Replicate small dataset everywhere</td>
+</tr>
+</tbody>
+</table>
+<p><code>SortMergeJoin</code> is Spark's default shuffle-based join strategy for large datasets.</p>
+<hr />
+<h2 id="example-pipeline">Example Pipeline<a class="headerlink" href="#example-pipeline" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">from pyspark.sql import SparkSession
+
+events_df = spark.read.csv(
+    &quot;s3a://clickstream/2019-Nov.csv&quot;,
+    header=True
+)
+
+users_df = spark.read.parquet(
+    &quot;s3a://users/users.parquet&quot;
+)
+
+joined_df = events_df.join(
+    users_df,
+    &quot;user_id&quot;
+)
+
+joined_df.count()
+</code></pre>
+<hr />
+<h2 id="physical-plan">Physical Plan<a class="headerlink" href="#physical-plan" title="Permanent link">&para;</a></h2>
+<pre><code class="language-text">== Physical Plan ==
+AdaptiveSparkPlan
++- == Final Plan ==
+   * HashAggregate
+   +- ShuffleQueryStage
+      +- Exchange
+         +- * HashAggregate
+            +- * Project
+               +- * SortMergeJoin
+                  :- * Sort
+                  :  +- AQEShuffleRead
+                  :     +- ShuffleQueryStage
+                  :        +- Exchange
+                  :           +- * Filter
+                  :              +- Scan csv
+                  +- * Sort
+                     +- AQEShuffleRead
+                        +- ShuffleQueryStage
+                           +- Exchange
+                              +- * Filter
+                                 +- * ColumnarToRow
+                                    +- Scan parquet
+</code></pre>
+<hr />
+<h2 id="initial-plan-vs-final-plan">Initial Plan vs Final Plan<a class="headerlink" href="#initial-plan-vs-final-plan" title="Permanent link">&para;</a></h2>
+<p>Spark physical plans exist in two forms:</p>
+<table>
+<thead>
+<tr>
+<th>Plan Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial Plan</td>
+<td>Optimizer's intended execution strategy</td>
+</tr>
+<tr>
+<td>Final Plan</td>
+<td>Runtime AQE-optimized execution strategy</td>
+</tr>
+</tbody>
+</table>
+<p>Before execution:</p>
+<ul>
+<li>Spark only knows estimated statistics</li>
+</ul>
+<p>During execution:</p>
+<ul>
+<li>AQE collects actual runtime statistics</li>
+<li>Spark may optimize partitioning and execution strategies dynamically</li>
+</ul>
+<p>This is why Spark shows:</p>
+<pre><code class="language-text">AdaptiveSparkPlan
+</code></pre>
+<p>and:</p>
+<pre><code class="language-text">isFinalPlan=true
+</code></pre>
+<p>after execution completes.</p>
+<hr />
+<h2 id="step-by-step-execution-walkthrough">Step-by-Step Execution Walkthrough<a class="headerlink" href="#step-by-step-execution-walkthrough" title="Permanent link">&para;</a></h2>
+<h3 id="1-scan-source-data">1. Scan Source Data<a class="headerlink" href="#1-scan-source-data" title="Permanent link">&para;</a></h3>
+<p>Spark first scans both datasets.</p>
+<h4 id="events-dataset_1">Events Dataset<a class="headerlink" href="#events-dataset_1" title="Permanent link">&para;</a></h4>
+<pre><code class="language-text">Scan csv
+</code></pre>
+<h4 id="users-dataset_1">Users Dataset<a class="headerlink" href="#users-dataset_1" title="Permanent link">&para;</a></h4>
+<pre><code class="language-text">Scan parquet
+</code></pre>
+<hr />
+<h4 id="important-observation-csv-vs-parquet">Important Observation: CSV vs Parquet<a class="headerlink" href="#important-observation-csv-vs-parquet" title="Permanent link">&para;</a></h4>
+<p>CSV scan:</p>
+<pre><code class="language-text">Batched: false
+</code></pre>
+<p>Parquet scan:</p>
+<pre><code class="language-text">Batched: true
+</code></pre>
+<p>Why?</p>
+<p>Parquet supports:</p>
+<ul>
+<li>vectorized columnar reads</li>
+</ul>
+<p>CSV does not.</p>
+<p>This is one major reason why Parquet significantly outperforms CSV.</p>
+<hr />
+<h3 id="2-catalyst-adds-null-filters">2. Catalyst Adds Null Filters<a class="headerlink" href="#2-catalyst-adds-null-filters" title="Permanent link">&para;</a></h3>
+<p>Spark automatically inserts:</p>
+<pre><code class="language-text">Filter isnotnull(user_id)
+</code></pre>
+<p>on both sides.</p>
+<p>Why?</p>
+<p>Because:</p>
+<ul>
+<li>null values cannot efficiently participate in equality joins</li>
+</ul>
+<p>This optimization is automatically added by Catalyst.</p>
+<hr />
+<h3 id="3-exchange-shuffle-boundary">3. Exchange — Shuffle Boundary<a class="headerlink" href="#3-exchange-shuffle-boundary" title="Permanent link">&para;</a></h3>
+<p>Spark then performs:</p>
+<pre><code class="language-text">Exchange
+Arguments: hashpartitioning(user_id, 200)
+</code></pre>
+<p>This is the most important distributed phase.</p>
+<p>Spark repartitions BOTH datasets using:</p>
+<pre><code class="language-text">hash(user_id) % 200
+</code></pre>
+<p>This guarantees:</p>
+<pre><code class="language-text">same user_ids land in same partition
+</code></pre>
+<p>This is the core requirement for distributed joins.</p>
+<hr />
+<h4 id="extremely-important-clarification">Extremely Important Clarification<a class="headerlink" href="#extremely-important-clarification" title="Permanent link">&para;</a></h4>
+<p><code>Exchange</code> is a logical shuffle boundary.</p>
+<p>It does NOT literally mean:</p>
+<ul>
+<li>Spark immediately pushes rows over network</li>
+</ul>
+<p>Instead it means:</p>
+<pre><code class="language-text">data must be redistributed by key
+</code></pre>
+<hr />
+<h4 id="actual-shuffle-mechanics">Actual Shuffle Mechanics<a class="headerlink" href="#actual-shuffle-mechanics" title="Permanent link">&para;</a></h4>
+<p>Shuffle internally happens in two phases.</p>
+<hr />
+<h4 id="map-side-shuffle-phase">Map-Side Shuffle Phase<a class="headerlink" href="#map-side-shuffle-phase" title="Permanent link">&para;</a></h4>
+<p>Map-side tasks:</p>
+<ol>
+<li>read rows</li>
+<li>hash rows by partition key</li>
+<li>write shuffle files LOCALLY</li>
+</ol>
+<p>Example:</p>
+<pre><code class="language-text">Executor A:
+  partition-0.data
+  partition-1.data
+  partition-2.data
+</code></pre>
+<p>At this point:</p>
+<ul>
+<li>reducers have NOT fetched anything yet</li>
+</ul>
+<hr />
+<h4 id="reduce-side-shuffle-phase">Reduce-Side Shuffle Phase<a class="headerlink" href="#reduce-side-shuffle-phase" title="Permanent link">&para;</a></h4>
+<p>Reducer tasks later:</p>
+<ol>
+<li>contact all executors</li>
+<li>fetch required shuffle partitions</li>
+<li>merge fetched data locally</li>
+</ol>
+<p>This means Spark shuffle is fundamentally:</p>
+<pre><code class="language-text">pull-based
+</code></pre>
+<p>NOT:</p>
+<ul>
+<li>push-based</li>
+</ul>
+<p>This design comes from Hadoop MapReduce architecture.</p>
+<hr />
+<h4 id="important-mental-model">Important Mental Model<a class="headerlink" href="#important-mental-model" title="Permanent link">&para;</a></h4>
+<pre><code class="language-text">Exchange
+=
+logical repartitioning boundary
+
+Internally implemented via:
+  map-side shuffle writes
+  +
+  reducer-side shuffle fetches
+</code></pre>
+<p>This is one of the most important Spark internals concepts.</p>
+<hr />
+<h3 id="4-shufflequerystage">4. ShuffleQueryStage<a class="headerlink" href="#4-shufflequerystage" title="Permanent link">&para;</a></h3>
+<p>After shuffle writes complete, Spark creates:</p>
+<pre><code class="language-text">ShuffleQueryStage
+</code></pre>
+<p>This represents:</p>
+<ul>
+<li>materialized shuffle output</li>
+<li>a stable shuffle boundary</li>
+<li>runtime statistics collection point</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-text">Statistics(sizeInBytes=2.0 GiB, rowCount=6.75E+7)
+</code></pre>
+<p>Spark now knows:</p>
+<ul>
+<li>actual shuffle size</li>
+<li>actual row counts</li>
+</ul>
+<p>This information is used by AQE.</p>
+<hr />
+<h3 id="5-aqeshuffleread">5. AQEShuffleRead<a class="headerlink" href="#5-aqeshuffleread" title="Permanent link">&para;</a></h3>
+<p>Spark then performs:</p>
+<pre><code class="language-text">AQEShuffleRead
+Arguments: coalesced
+</code></pre>
+<p>This means:</p>
+<ul>
+<li>AQE dynamically reduced shuffle partition count</li>
+</ul>
+<p>Instead of:</p>
+<ul>
+<li>reading all original shuffle partitions</li>
+</ul>
+<p>Spark may:</p>
+<ul>
+<li>merge tiny partitions together</li>
+</ul>
+<p>This improves:</p>
+<ul>
+<li>scheduling overhead</li>
+<li>tiny task inefficiency</li>
+<li>resource utilization</li>
+</ul>
+<hr />
+<h3 id="6-sort-within-partition">6. Sort Within Partition<a class="headerlink" href="#6-sort-within-partition" title="Permanent link">&para;</a></h3>
+<p>After reducers fetch shuffle data:</p>
+<p>Spark performs:</p>
+<pre><code class="language-text">Sort
+</code></pre>
+<p>Important:</p>
+<p>Sorting happens:</p>
+<pre><code class="language-text">within EACH partition
+</code></pre>
+<p>NOT:</p>
+<ul>
+<li>globally across cluster</li>
+</ul>
+<p>This distinction is extremely important.</p>
+<hr />
+<h4 id="why-sorting-is-required">Why Sorting Is Required<a class="headerlink" href="#why-sorting-is-required" title="Permanent link">&para;</a></h4>
+<p>Once both datasets are:</p>
+<ul>
+<li>partitioned identically</li>
+<li>sorted by join key</li>
+</ul>
+<p>Spark can perform:</p>
+<pre><code class="language-text">sequential merge join
+</code></pre>
+<p>similar to:</p>
+<ul>
+<li>merge step in merge sort</li>
+</ul>
+<p>This approach is:</p>
+<ul>
+<li>memory efficient</li>
+<li>scalable</li>
+<li>streaming-friendly</li>
+</ul>
+<hr />
+<h3 id="7-sortmergejoin-execution">7. SortMergeJoin Execution<a class="headerlink" href="#7-sortmergejoin-execution" title="Permanent link">&para;</a></h3>
+<p>Now both sides contain:</p>
+<ul>
+<li>matching partition topology</li>
+<li>sorted rows</li>
+</ul>
+<p>Spark can perform local merge join execution.</p>
+<p>Important:</p>
+<pre><code class="language-text">network movement already completed earlier
+</code></pre>
+<p>during:</p>
+<ul>
+<li>Exchange / shuffle phase</li>
+</ul>
+<p>The actual <code>SortMergeJoin</code> operator is:</p>
+<ul>
+<li>local CPU computation</li>
+<li>not network transfer</li>
+</ul>
+<hr />
+<h4 id="extremely-important-distinction">Extremely Important Distinction<a class="headerlink" href="#extremely-important-distinction" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exchange</td>
+<td>Distributed data movement</td>
+</tr>
+<tr>
+<td>AQEShuffleRead</td>
+<td>Reducer-side shuffle fetch</td>
+</tr>
+<tr>
+<td>Sort</td>
+<td>Local ordering</td>
+</tr>
+<tr>
+<td>SortMergeJoin</td>
+<td>Local merge computation</td>
+</tr>
+</tbody>
+</table>
+<p>This is a foundational Spark execution concept.</p>
+<hr />
+<h3 id="8-columnartorow">8. ColumnarToRow<a class="headerlink" href="#8-columnartorow" title="Permanent link">&para;</a></h3>
+<p>Parquet scan shows:</p>
+<pre><code class="language-text">ColumnarToRow
+</code></pre>
+<p>Why?</p>
+<p>Parquet internally uses:</p>
+<ul>
+<li>columnar vectorized representation</li>
+</ul>
+<p>But:</p>
+<ul>
+<li>SortMergeJoin operates on row-based execution</li>
+</ul>
+<p>Spark therefore converts:</p>
+<ul>
+<li>columnar batches
+  → rows</li>
+</ul>
+<p>This becomes important later while learning:</p>
+<ul>
+<li>Tungsten</li>
+<li>vectorized execution</li>
+<li>whole-stage codegen</li>
+</ul>
+<hr />
+<h3 id="9-count-aggregation">9. Count Aggregation<a class="headerlink" href="#9-count-aggregation" title="Permanent link">&para;</a></h3>
+<p>The query ends with:</p>
+<pre><code class="language-python">joined_df.count()
+</code></pre>
+<p>Spark implements this using distributed aggregation.</p>
+<hr />
+<h3 id="partial-aggregation">Partial Aggregation<a class="headerlink" href="#partial-aggregation" title="Permanent link">&para;</a></h3>
+<p>Each partition first computes:</p>
+<pre><code class="language-text">partial_count
+</code></pre>
+<p>locally.</p>
+<p>This reduces:</p>
+<ul>
+<li>network traffic</li>
+<li>shuffle volume</li>
+</ul>
+<hr />
+<h3 id="final-aggregation">Final Aggregation<a class="headerlink" href="#final-aggregation" title="Permanent link">&para;</a></h3>
+<p>Spark then performs:</p>
+<pre><code class="language-text">Exchange
+Arguments: SinglePartition
+</code></pre>
+<p>This gathers:</p>
+<ul>
+<li>all partial counts</li>
+<li>into a single reducer partition</li>
+</ul>
+<p>Then Spark computes:</p>
+<pre><code class="language-text">final count
+</code></pre>
+<p>This is a classic distributed aggregation pattern.</p>
+<hr />
+<h2 id="why-sortmergejoin-scales-well">Why SortMergeJoin Scales Well<a class="headerlink" href="#why-sortmergejoin-scales-well" title="Permanent link">&para;</a></h2>
+<p>Unlike large hash joins:</p>
+<ul>
+<li>SortMergeJoin does not require huge in-memory hash tables</li>
+</ul>
+<p>Instead Spark:</p>
+<ul>
+<li>streams through sorted datasets sequentially</li>
+</ul>
+<p>This makes it:</p>
+<ul>
+<li>more memory efficient</li>
+<li>better for very large datasets</li>
+</ul>
+<hr />
+<h2 id="why-sortmergejoin-is-expensive">Why SortMergeJoin Is Expensive<a class="headerlink" href="#why-sortmergejoin-is-expensive" title="Permanent link">&para;</a></h2>
+<p>Even though merge computation itself is efficient:</p>
+<p>shuffle is extremely expensive because Spark must:</p>
+<ul>
+<li>serialize rows</li>
+<li>partition rows</li>
+<li>spill to disk</li>
+<li>transfer data across network</li>
+<li>fetch remote shuffle blocks</li>
+<li>merge shuffle files</li>
+<li>sort reducer partitions</li>
+</ul>
+<p>Most join cost usually comes from:</p>
+<pre><code class="language-text">shuffle
+</code></pre>
+<p>NOT:</p>
+<ul>
+<li>merge computation itself</li>
+</ul>
+<hr />
+<h2 id="most-important-mental-models">Most Important Mental Models<a class="headerlink" href="#most-important-mental-models" title="Permanent link">&para;</a></h2>
+<h3 id="1-distributed-joins-mean-colocating-keys">1. Distributed Joins Mean Colocating Keys<a class="headerlink" href="#1-distributed-joins-mean-colocating-keys" title="Permanent link">&para;</a></h3>
+<pre><code class="language-text">matching keys must land together
+</code></pre>
+<p>This is the core distributed join requirement.</p>
+<hr />
+<h3 id="2-exchange-is-logical">2. Exchange Is Logical<a class="headerlink" href="#2-exchange-is-logical" title="Permanent link">&para;</a></h3>
+<p><code>Exchange</code> represents:</p>
+<ul>
+<li>repartitioning intent</li>
+</ul>
+<p>Internally implemented via:</p>
+<ul>
+<li>map-side shuffle writes</li>
+<li>reducer-side shuffle fetches</li>
+</ul>
+<hr />
+<h3 id="3-shuffle-is-pull-based">3. Shuffle Is Pull-Based<a class="headerlink" href="#3-shuffle-is-pull-based" title="Permanent link">&para;</a></h3>
+<p>Reducers:</p>
+<ul>
+<li>fetch shuffle blocks from executors</li>
+</ul>
+<p>Spark shuffle is fundamentally:</p>
+<ul>
+<li>reducer pull driven</li>
+</ul>
+<hr />
+<h3 id="4-sort-happens-after-shuffle-fetch">4. Sort Happens After Shuffle Fetch<a class="headerlink" href="#4-sort-happens-after-shuffle-fetch" title="Permanent link">&para;</a></h3>
+<p>Sorting occurs:</p>
+<ul>
+<li>on reducer side</li>
+<li>after partitions are fetched</li>
+</ul>
+<p>NOT:</p>
+<ul>
+<li>before network transfer</li>
+</ul>
+<hr />
+<h3 id="5-sortmergejoin-itself-is-local">5. SortMergeJoin Itself Is Local<a class="headerlink" href="#5-sortmergejoin-itself-is-local" title="Permanent link">&para;</a></h3>
+<p>Actual join computation:</p>
+<ul>
+<li>happens locally</li>
+<li>after shuffle completes</li>
+</ul>
+<hr />
+<h3 id="6-aqe-optimizes-runtime-execution">6. AQE Optimizes Runtime Execution<a class="headerlink" href="#6-aqe-optimizes-runtime-execution" title="Permanent link">&para;</a></h3>
+<p>AQE can:</p>
+<ul>
+<li>coalesce partitions</li>
+<li>optimize shuffle reads</li>
+<li>dynamically adapt execution</li>
+</ul>
+<p>based on:</p>
+<ul>
+<li>actual runtime statistics</li>
+</ul>
+<hr />
+<h3 id="7-most-join-cost-comes-from-shuffle">7. Most Join Cost Comes From Shuffle<a class="headerlink" href="#7-most-join-cost-comes-from-shuffle" title="Permanent link">&para;</a></h3>
+<p>The expensive part is:</p>
+<ul>
+<li>network movement</li>
+<li>disk spill</li>
+<li>shuffle management</li>
+</ul>
+<p>NOT:</p>
+<ul>
+<li>merge computation itself</li>
+</ul>
+<hr />
+<h2 id="related-concepts">Related Concepts<a class="headerlink" href="#related-concepts" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Shuffle</li>
+<li>AQE</li>
+<li>Partitioning</li>
+<li>BroadcastHashJoin</li>
+<li>ShuffleHashJoin</li>
+<li>Repartition vs Coalesce</li>
+<li>Spark Physical Plans</li>
+<li>Spark UI</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.tabs.link", "search.suggest", "search.highlight", "toc.follow", "content.action.edit", "content.action.view"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
